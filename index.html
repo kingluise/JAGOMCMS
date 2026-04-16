@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JAGOM Church Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#059669',
+                        'primary-light': '#d1fae5',
+                        'primary-dark': '#047857',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div id="navLogo" class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
+                        <i class="fas fa-church text-primary text-lg"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-900">JAGOM</span>
+                </div>
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#features" class="text-sm font-medium text-gray-600 hover:text-primary transition">Features</a>
+                    <a href="#branches" class="text-sm font-medium text-gray-600 hover:text-primary transition">Branches</a>
+                    <a href="#about" class="text-sm font-medium text-gray-600 hover:text-primary transition">About</a>
+                </div>
+                <a href="login.html" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition shadow-sm shadow-primary/25">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="pt-28 pb-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary-light/40 via-transparent to-transparent"></div>
+        <div class="absolute top-20 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl"></div>
+        <div class="max-w-7xl mx-auto relative">
+            <div class="text-center max-w-3xl mx-auto">
+                <div class="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-medium mb-6">
+                    <i class="fas fa-sparkles"></i>
+                    Church Management Made Simple
+                </div>
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
+                    JAGOM Church<br>
+                    <span class="text-primary">Management System</span>
+                </h1>
+                <p class="text-lg sm:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
+                    Streamline attendance tracking, usher management, finance oversight, and branch coordination — all from one unified platform.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="login.html" class="bg-primary hover:bg-primary-dark text-white px-8 py-3.5 rounded-xl text-base font-semibold transition shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30">
+                        Get Started <i class="fas fa-arrow-right ml-2"></i>
+                    </a>
+                    <a href="#features" class="bg-white hover:bg-gray-50 text-gray-700 px-8 py-3.5 rounded-xl text-base font-semibold transition border border-gray-200 shadow-sm">
+                        <i class="fas fa-play-circle mr-2 text-primary"></i> Learn More
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                <div class="bg-white rounded-xl p-5 text-center shadow-sm border border-gray-100 hover:shadow-md transition">
+                    <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-users text-primary"></i>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-900">4</p>
+                    <p class="text-sm text-gray-500">Branches</p>
+                </div>
+                <div class="bg-white rounded-xl p-5 text-center shadow-sm border border-gray-100 hover:shadow-md transition">
+                    <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-clipboard-check text-primary"></i>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-900">Real-time</p>
+                    <p class="text-sm text-gray-500">Attendance</p>
+                </div>
+                <div class="bg-white rounded-xl p-5 text-center shadow-sm border border-gray-100 hover:shadow-md transition">
+                    <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-money-bill-wave text-primary"></i>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-900">Full</p>
+                    <p class="text-sm text-gray-500">Finance Tracking</p>
+                </div>
+                <div class="bg-white rounded-xl p-5 text-center shadow-sm border border-gray-100 hover:shadow-md transition">
+                    <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-shield-halved text-primary"></i>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-900">Role-based</p>
+                    <p class="text-sm text-gray-500">Access Control</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Branches Section -->
+    <section id="branches" class="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12">
+                <p class="text-primary font-semibold text-sm uppercase tracking-wider mb-2">Our Branches</p>
+                <h2 class="text-3xl sm:text-4xl font-bold text-gray-900">Four Locations, One Mission</h2>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="branchCards">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12">
+                <p class="text-primary font-semibold text-sm uppercase tracking-wider mb-2">Features</p>
+                <h2 class="text-3xl sm:text-4xl font-bold text-gray-900">Everything You Need</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-lg hover:border-primary/20 transition group">
+                    <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-5 group-hover:bg-primary group-hover:text-white transition">
+                        <i class="fas fa-clipboard-check text-primary group-hover:text-white text-xl transition"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Attendance Tracking</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Mark and monitor attendance across all branches with real-time data and filtering capabilities.</p>
+                </div>
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-lg hover:border-primary/20 transition group">
+                    <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-5 group-hover:bg-primary group-hover:text-white transition">
+                        <i class="fas fa-people-group text-primary group-hover:text-white text-xl transition"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Usher Management</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Record service details including preacher, message, and financial contributions with auto-calculation.</p>
+                </div>
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-lg hover:border-primary/20 transition group">
+                    <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-5 group-hover:bg-primary group-hover:text-white transition">
+                        <i class="fas fa-chart-pie text-primary group-hover:text-white text-xl transition"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Finance & Reports</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Approve or reject submissions, track branch performance, and generate printable financial reports.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div class="max-w-4xl mx-auto text-center">
+            <p class="text-primary font-semibold text-sm uppercase tracking-wider mb-2">About JAGOM</p>
+            <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">Built for the Church</h2>
+            <p class="text-gray-500 text-lg leading-relaxed mb-8">JAGOM Church Management System is designed to simplify the day-to-day operations of church administration. From tracking attendance to managing finances across multiple branches, JAGOM provides a clean and intuitive interface for every role — Super Admins, Admins, and Users.</p>
+            <a href="login.html" class="inline-flex items-center bg-primary hover:bg-primary-dark text-white px-8 py-3.5 rounded-xl text-base font-semibold transition shadow-lg shadow-primary/25">
+                Start Managing <i class="fas fa-arrow-right ml-2"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <i class="fas fa-church text-primary text-sm"></i>
+                    </div>
+                    <span class="text-white font-bold">JAGOM</span>
+                </div>
+                <p class="text-sm">&copy; <span id="footerYear"></span> JAGOM Church Management System. All rights reserved.</p>
+                <div class="flex gap-4">
+                    <a href="#" class="hover:text-primary transition"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="hover:text-primary transition"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="hover:text-primary transition"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

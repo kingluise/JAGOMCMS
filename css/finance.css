@@ -1,0 +1,84 @@
+/* Sidebar Nav Items */
+.nav-item {
+    color: #6b7280;
+}
+
+.nav-item:hover {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+.nav-item.active {
+    background-color: #d1fae5;
+    color: #059669;
+    font-weight: 600;
+}
+
+.nav-item.active i {
+    color: #059669;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+/* Table row hover */
+tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* Print styles */
+@media print {
+    body > *:not(#printTemplate) {
+        display: none !important;
+    }
+    #printTemplate {
+        display: block !important;
+    }
+}
+
+/* Action buttons */
+.action-btn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+}
+
+.action-btn.approve {
+    background-color: #d1fae5;
+    color: #059669;
+}
+
+.action-btn.approve:hover {
+    background-color: #059669;
+    color: white;
+}
+
+.action-btn.reject {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+.action-btn.reject:hover {
+    background-color: #ef4444;
+    color: white;
+}
+
+/* Branch card hover */
+.branch-card:hover {
+    transform: translateY(-2px);
+}

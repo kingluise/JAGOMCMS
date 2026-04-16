@@ -1,0 +1,175 @@
+/* Super Admin Page Styles - Jibble Inspired with Green Accents */
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #059669;
+}
+
+/* Sidebar Navigation Styles */
+.nav-item {
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.nav-item i {
+    font-size: 1.1rem;
+}
+
+.nav-item:hover {
+    background-color: #f3f4f6;
+    color: #059669;
+}
+
+.nav-item.active {
+    background-color: #d1fae5;
+    color: #059669;
+}
+
+.nav-item.active i {
+    color: #059669;
+}
+
+/* Tab Styles */
+.tab-btn {
+    color: #6b7280;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+    color: #059669;
+    background-color: #f9fafb;
+}
+
+.tab-btn.active {
+    color: #059669;
+    border-bottom-color: #059669;
+}
+
+/* Table Styles */
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+th {
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* Action Buttons */
+.action-btn {
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Modal Animation */
+.modal-show {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Card Hover Effects */
+.bg-white.rounded-xl {
+    transition: box-shadow 0.2s ease;
+}
+
+.bg-white.rounded-xl:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Input Focus Styles */
+input:focus, select:focus {
+    outline: none;
+}
+
+/* Button Loading State */
+.btn-loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .tab-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+    }
+
+    table th, table td {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Toast Notification (if needed) */
+.toast-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Role Badge Colors */
+.role-badge-superadmin {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.role-badge-admin {
+    background-color: #d1fae5;
+    color: #059669;
+}
+
+.role-badge-user {
+    background-color: #e0e7ff;
+    color: #4f46e5;
+}

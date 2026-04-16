@@ -1,0 +1,22 @@
+/* Login Page Custom Styles */
+body {
+    background: linear-gradient(135deg, #f0fdf4 0%, #f9fafb 50%, #f0fdf4 100%);
+}
+
+input:focus, select:focus {
+    outline: none;
+}
+
+select {
+    background-image: none;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.shake {
+    animation: shake 0.4s ease-in-out;
+}

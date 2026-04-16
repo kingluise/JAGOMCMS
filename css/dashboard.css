@@ -1,0 +1,46 @@
+/* Sidebar Nav Items */
+.nav-item {
+    color: #6b7280;
+}
+
+.nav-item:hover {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+.nav-item.active {
+    background-color: #d1fae5;
+    color: #059669;
+    font-weight: 600;
+}
+
+.nav-item.active i {
+    color: #059669;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Card hover effect */
+.group:hover .group-hover\:bg-primary {
+    background-color: #059669;
+}
+
+.group:hover .group-hover\:text-white {
+    color: white;
+}
