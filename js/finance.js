@@ -1,7 +1,14 @@
-// js/finance.js - Backend Integrated Version
+// js/finance.js - Full Version with Charts
 
 // API Base URL
 const API_BASE_URL = 'https://localhost:7015/api';
+
+// Global variables
+let branches = [];
+let currentUserRole = '';
+let allSubmissions = [];
+let financeTrendChart = null;
+let branchComparisonChart = null;
 
 // Helper function for authenticated API calls
 async function apiFetch(endpoint, options = {}) {
@@ -41,7 +48,7 @@ async function apiFetch(endpoint, options = {}) {
     }
 }
 
-// Auth check - Check token instead of just isLoggedIn
+// Auth check
 (function checkAuth() {
     const token = localStorage.getItem('token');
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -51,11 +58,6 @@ async function apiFetch(endpoint, options = {}) {
         return;
     }
 })();
-
-// Global variables
-let branches = [];
-let currentUserRole = '';
-let allSubmissions = [];
 
 // Load user role and check access
 async function loadUserRole() {
@@ -131,7 +133,341 @@ function populateBranchFilter() {
     });
 }
 
-// Load branch performance from backend
+// Get period parameters
+function getPeriodParams() {
+    const period = document.getElementById('financePeriod')?.value || 'monthly';
+    let startDate = null;
+    let endDate = null;
+    
+    if (period === 'custom') {
+        startDate = document.getElementById('financeStartDate')?.value;
+        endDate = document.getElementById('financeEndDate')?.value;
+        
+        if (!startDate || !endDate) {
+            const today = new Date();
+            endDate = today.toISOString().split('T')[0];
+            const defaultStart = new Date(today);
+            defaultStart.setDate(today.getDate() - 30);
+            startDate = defaultStart.toISOString().split('T')[0];
+        }
+    }
+    
+    return { period, startDate, endDate };
+}
+
+// Show/hide custom date picker
+function initPeriodSelector() {
+    const periodSelect = document.getElementById('financePeriod');
+    const customDateRange = document.getElementById('financeCustomDateRange');
+    
+    if (periodSelect) {
+        periodSelect.addEventListener('change', () => {
+            if (periodSelect.value === 'custom') {
+                customDateRange?.classList.remove('hidden');
+            } else {
+                customDateRange?.classList.add('hidden');
+                refreshAllFinanceData();
+            }
+        });
+    }
+    
+    const applyBtn = document.getElementById('applyFinanceRange');
+    if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+            refreshAllFinanceData();
+        });
+    }
+    
+    const refreshBtn = document.getElementById('refreshFinanceBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            refreshAllFinanceData();
+        });
+    }
+}
+
+// Load performance rating cards
+async function loadPerformanceRatings() {
+    const container = document.getElementById('performanceRatings');
+    const recommendationSpan = document.getElementById('recommendationText');
+    if (!container) return;
+    
+    const { period, startDate, endDate } = getPeriodParams();
+    
+    container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading ratings...</div>';
+    
+    try {
+        let url = `/analytics/finance-performance-rating`;
+        if (startDate && endDate) {
+            url += `?startDate=${startDate}&endDate=${endDate}`;
+        }
+        
+        const result = await apiFetch(url);
+        
+        if (result && result.success && result.data && result.data.branchRatings) {
+            const ratings = result.data.branchRatings;
+            
+            if (recommendationSpan && result.data.recommendation) {
+                recommendationSpan.innerHTML = `<i class="fas fa-lightbulb text-amber-500 mr-1"></i> ${result.data.recommendation}`;
+            }
+            
+            container.innerHTML = ratings.map(r => {
+                const stars = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
+                const trendIcon = r.trend === 'Up' ? '📈' : (r.trend === 'Down' ? '📉' : '➡️');
+                const trendColor = r.trend === 'Up' ? 'text-green-500' : (r.trend === 'Down' ? 'text-red-500' : 'text-gray-500');
+                const changeColor = r.percentageChange >= 0 ? 'text-green-500' : 'text-red-500';
+                
+                return `
+                    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-bold text-gray-900">${escapeHtml(r.branchName)}</h4>
+                            <span class="text-2xl text-amber-400">${stars}</span>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500">Total Giving</span>
+                                <span class="font-semibold text-primary">₦${formatNumber(r.totalGiving)}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500">Trend</span>
+                                <span class="text-sm ${trendColor}">${trendIcon} ${r.trend}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500">Change</span>
+                                <span class="text-sm ${changeColor}">${r.percentageChange >= 0 ? '+' : ''}${r.percentageChange.toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400">No rating data available</div>';
+        }
+    } catch (error) {
+        console.error('Error loading performance ratings:', error);
+        container.innerHTML = '<div class="col-span-full text-center py-8 text-red-400">Error loading ratings</div>';
+    }
+}
+
+// Load finance trend chart
+async function loadFinanceTrendChart() {
+    const { period, startDate, endDate } = getPeriodParams();
+    
+    const chartCanvas = document.getElementById('financeTrendChart');
+    const emptyDiv = document.getElementById('financeChartEmpty');
+    
+    if (!chartCanvas) return;
+    
+    chartCanvas.style.display = 'block';
+    emptyDiv?.classList.add('hidden');
+    
+    try {
+        let url = `/analytics/finance-trend?period=${period}`;
+        if (startDate && endDate) {
+            url += `&startDate=${startDate}&endDate=${endDate}`;
+        }
+        
+        const result = await apiFetch(url);
+        
+        if (result && result.success && result.data && result.data.data && result.data.data.length > 0) {
+            const labels = result.data.data.map(d => d.period);
+            const titheData = result.data.data.map(d => d.tithe);
+            const offeringData = result.data.data.map(d => d.offering);
+            const specialSeedData = result.data.data.map(d => d.specialSeed);
+            
+            // Update summary totals
+            if (result.data.summary) {
+                document.getElementById('totalTithe').textContent = `₦${formatNumber(result.data.summary.totalTithe)}`;
+                document.getElementById('totalOffering').textContent = `₦${formatNumber(result.data.summary.totalOffering)}`;
+                document.getElementById('totalSpecialSeed').textContent = `₦${formatNumber(result.data.summary.totalSpecialSeed)}`;
+                document.getElementById('grandTotal').textContent = `₦${formatNumber(result.data.summary.grandTotal)}`;
+            }
+            
+            if (financeTrendChart) {
+                financeTrendChart.destroy();
+            }
+            
+            const ctx = chartCanvas.getContext('2d');
+            financeTrendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Tithe',
+                            data: titheData,
+                            backgroundColor: 'rgba(5, 150, 105, 0.7)',
+                            borderColor: '#059669',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Offering',
+                            data: offeringData,
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Special Seed',
+                            data: specialSeedData,
+                            backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                            borderColor: '#f59e0b',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ₦${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Amount (₦)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '₦' + value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: period === 'weekly' ? 'Week' : (period === 'monthly' ? 'Month' : (period === 'quarterly' ? 'Quarter' : 'Year'))
+                            }
+                        }
+                    }
+                }
+            });
+            
+            chartCanvas.classList.remove('hidden');
+            if (emptyDiv) emptyDiv.classList.add('hidden');
+        } else {
+            chartCanvas.classList.add('hidden');
+            if (emptyDiv) emptyDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error loading finance trend:', error);
+        chartCanvas.classList.add('hidden');
+        if (emptyDiv) emptyDiv.classList.remove('hidden');
+    }
+}
+
+// Load branch comparison chart
+async function loadBranchComparisonChart() {
+    const { period, startDate, endDate } = getPeriodParams();
+    
+    const chartCanvas = document.getElementById('branchComparisonChart');
+    const emptyDiv = document.getElementById('branchComparisonEmpty');
+    
+    if (!chartCanvas) return;
+    
+    try {
+        let url = `/analytics/branch-finance-comparison?period=${period}`;
+        if (startDate && endDate) {
+            url += `&startDate=${startDate}&endDate=${endDate}`;
+        }
+        
+        const result = await apiFetch(url);
+        
+        if (result && result.success && result.data && result.data.branches && result.data.branches.length > 0) {
+            const branchNames = result.data.branches.map(b => b.branchName);
+            const givingData = result.data.branches.map(b => b.totalGiving);
+            const percentages = result.data.branches.map(b => b.percentageOfTotal.toFixed(1));
+            
+            // Update top branch message
+            const topBranchMsg = document.getElementById('topBranchMessage');
+            if (topBranchMsg && result.data.topBranch) {
+                topBranchMsg.innerHTML = `🏆 <strong>${escapeHtml(result.data.topBranch.branchName)}</strong> is the top performing branch with <strong>₦${formatNumber(result.data.topBranch.totalGiving)}</strong> (${result.data.topBranch.percentageOfTotal.toFixed(1)}% of total)`;
+            }
+            
+            if (branchComparisonChart) {
+                branchComparisonChart.destroy();
+            }
+            
+            const ctx = chartCanvas.getContext('2d');
+            branchComparisonChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: branchNames,
+                    datasets: [
+                        {
+                            label: 'Total Giving (₦)',
+                            data: givingData,
+                            backgroundColor: 'rgba(5, 150, 105, 0.8)',
+                            borderColor: '#059669',
+                            borderWidth: 1,
+                            borderRadius: 8
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    return [
+                                        `Amount: ₦${context.raw.toLocaleString()}`,
+                                        `Percentage: ${percentages[index]}% of total`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Amount (₦)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '₦' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            chartCanvas.classList.remove('hidden');
+            if (emptyDiv) emptyDiv.classList.add('hidden');
+        } else {
+            chartCanvas.classList.add('hidden');
+            if (emptyDiv) emptyDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error loading branch comparison:', error);
+        chartCanvas.classList.add('hidden');
+        if (emptyDiv) emptyDiv.classList.remove('hidden');
+    }
+}
+
+// Load branch performance cards
 async function loadBranchPerformance() {
     const container = document.getElementById('branchPerformance');
     if (!container) return;
@@ -181,7 +517,7 @@ async function loadBranchPerformance() {
     }
 }
 
-// Load finance table from backend
+// Load finance table
 async function loadFinanceTable(filterBranch = 'all') {
     const tbody = document.getElementById('financeTableBody');
     const noSubmissions = document.getElementById('noSubmissions');
@@ -191,13 +527,11 @@ async function loadFinanceTable(filterBranch = 'all') {
     tbody.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading submissions...</td></tr>`;
     
     try {
-        // Get all submissions (including pending, approved, rejected)
         const result = await apiFetch('/ushers/submissions');
         
         if (result && result.success && result.data) {
             let submissions = result.data;
             
-            // Filter by branch if needed
             if (filterBranch !== 'all') {
                 submissions = submissions.filter(s => s.branchName === filterBranch);
             }
@@ -246,7 +580,7 @@ async function loadFinanceTable(filterBranch = 'all') {
         }
     } catch (error) {
         console.error('Error loading submissions:', error);
-        tbody.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-red-400">Error loading submissions</td></tr>`;
+        tbody.innerHTML = `<td><td colspan="10" class="text-center py-8 text-red-400">Error loading submissions</td></tr>`;
     }
 }
 
@@ -266,10 +600,7 @@ async function approveSubmission(id) {
         
         if (result && result.success) {
             alert('Submission approved successfully!');
-            // Refresh data
-            await loadBranchPerformance();
-            const filter = document.getElementById('financeBranchFilter').value;
-            await loadFinanceTable(filter);
+            await refreshAllFinanceData();
         } else {
             alert(result?.message || 'Failed to approve submission');
         }
@@ -298,10 +629,7 @@ async function rejectSubmission(id) {
         
         if (result && result.success) {
             alert('Submission rejected successfully!');
-            // Refresh data
-            await loadBranchPerformance();
-            const filter = document.getElementById('financeBranchFilter').value;
-            await loadFinanceTable(filter);
+            await refreshAllFinanceData();
         } else {
             alert(result?.message || 'Failed to reject submission');
         }
@@ -362,6 +690,21 @@ async function generateReport() {
     } catch (error) {
         console.error('Error generating report:', error);
         alert('Error generating report');
+    }
+}
+
+// Refresh all finance data
+async function refreshAllFinanceData() {
+    await loadPerformanceRatings();
+    await loadFinanceTrendChart();
+    await loadBranchComparisonChart();
+    await loadBranchPerformance();
+    const filter = document.getElementById('financeBranchFilter')?.value || 'all';
+    await loadFinanceTable(filter);
+    
+    const lastUpdated = document.getElementById('financeLastUpdated');
+    if (lastUpdated) {
+        lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
     }
 }
 
@@ -486,8 +829,8 @@ async function init() {
     if (!hasAccess) return;
     
     await loadBranches();
-    await loadBranchPerformance();
-    await loadFinanceTable();
+    initPeriodSelector();
+    await refreshAllFinanceData();
 }
 
 init();

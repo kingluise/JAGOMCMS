@@ -1,11 +1,22 @@
-// js/dashboard.js - Modified with Backend API Integration
+// js/dashboard.js - Enhanced Version with Analytics
 
 // API Base URL
 const API_BASE_URL = 'https://localhost:7015/api';
 
+// Global variables
+let attendanceChart = null;
+let currentUserRole = '';
+let currentUserBranchId = null;
+let allBranches = [];
+
 // Helper function for authenticated API calls
 async function apiFetch(endpoint, options = {}) {
     const token = localStorage.getItem('token');
+    
+    if (!token) {
+        window.location.href = 'login.html';
+        return null;
+    }
     
     const defaultOptions = {
         headers: {
@@ -34,14 +45,27 @@ async function apiFetch(endpoint, options = {}) {
             return null;
         }
         
-        return await response.json();
+        if (response.status === 403) {
+            console.warn('Access forbidden for endpoint:', endpoint);
+            return null;
+        }
+        
+        const text = await response.text();
+        if (!text || text.trim() === '') return null;
+        
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('Invalid JSON:', text.substring(0, 200));
+            return null;
+        }
     } catch (error) {
         console.error('API Error:', error);
-        throw error;
+        return null;
     }
 }
 
-// Auth check - Modified to check token instead of just isLoggedIn
+// Auth check
 (function checkAuth() {
     const token = localStorage.getItem('token');
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -52,130 +76,129 @@ async function apiFetch(endpoint, options = {}) {
     }
 })();
 
-// Initialize defaults - Keep only branch data, remove user initialization
-function initDefaults() {
-    if (!localStorage.getItem('branches')) {
-        localStorage.setItem('branches', JSON.stringify(["Opebi", "Ikorodu", "Otuyelu", "Likosi"]));
-    }
-    if (!localStorage.getItem('members')) {
-        localStorage.setItem('members', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('attendance')) {
-        localStorage.setItem('attendance', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('usherSubmissions')) {
-        localStorage.setItem('usherSubmissions', JSON.stringify([]));
-    }
-}
-initDefaults();
-
-// Display role badge - FIXED VERSION (handles both string and number roles)
-async function loadRoleBadge() {
+// Load user info and role - FIXED to handle number roles
+async function loadUserInfo() {
     try {
         const result = await apiFetch('/auth/me');
-        const roleBadge = document.getElementById('roleBadge');
-        
         if (result && result.success) {
-            let userRole = result.data.role;
+            const user = result.data;
+            const userRoleValue = user.role;
+            currentUserBranchId = user.branchId;
             
-            // Convert role to display format (handles both string and number)
-            if (userRole === 'SuperAdmin' || userRole === 'superadmin' || userRole === 3 || userRole === '3') {
-                roleBadge.textContent = 'Super Admin';
-            } else if (userRole === 'Admin' || userRole === 'admin' || userRole === 2 || userRole === '2') {
-                roleBadge.textContent = 'Admin';
+            // Display role badge - Handle both number and string roles
+            const roleBadge = document.getElementById('roleBadge');
+            let displayRole = 'User';
+            
+            // Check if role is a number (enum value) or string
+            if (userRoleValue === 3 || userRoleValue === '3' || userRoleValue === 'SuperAdmin' || userRoleValue === 'superadmin') {
+                displayRole = 'Super Admin';
+                currentUserRole = 'SuperAdmin';
+            } else if (userRoleValue === 2 || userRoleValue === '2' || userRoleValue === 'Admin' || userRoleValue === 'admin') {
+                displayRole = 'Admin';
+                currentUserRole = 'Admin';
+            } else if (userRoleValue === 1 || userRoleValue === '1' || userRoleValue === 'User' || userRoleValue === 'user') {
+                displayRole = 'User';
+                currentUserRole = 'User';
             } else {
-                roleBadge.textContent = 'User';
+                // Fallback: try to use as string
+                currentUserRole = userRoleValue;
+                displayRole = userRoleValue;
             }
             
-            // Store for quick access
-            localStorage.setItem('userRole', roleBadge.textContent);
+            if (roleBadge) {
+                roleBadge.textContent = displayRole;
+            }
+            
+            // Store role for quick access
+            localStorage.setItem('userRole', displayRole);
+            
+            // Show/hide branch filter based on role (only Super Admin sees it)
+            const branchFilterSection = document.getElementById('branchFilterSection');
+            if (branchFilterSection) {
+                if (currentUserRole !== 'SuperAdmin') {
+                    branchFilterSection.style.display = 'none';
+                } else {
+                    branchFilterSection.style.display = 'block';
+                }
+            }
         } else {
             // Fallback to localStorage
+            const roleBadge = document.getElementById('roleBadge');
             let role = localStorage.getItem('userRole') || 'User';
-            if (role === '3' || role === 'superadmin' || role === 'SuperAdmin') role = 'Super Admin';
-            if (role === '2' || role === 'admin' || role === 'Admin') role = 'Admin';
-            if (role === '1' || role === 'user' || role === 'User') role = 'User';
-            roleBadge.textContent = role;
+            if (role === 'Super Admin') {
+                currentUserRole = 'SuperAdmin';
+            } else if (role === 'Admin') {
+                currentUserRole = 'Admin';
+            } else {
+                currentUserRole = 'User';
+            }
+            if (roleBadge) roleBadge.textContent = role;
         }
     } catch (error) {
-        console.error('Error loading role:', error);
+        console.error('Error loading user info:', error);
         const roleBadge = document.getElementById('roleBadge');
-        roleBadge.textContent = 'User';
+        if (roleBadge) roleBadge.textContent = 'User';
+        currentUserRole = 'User';
     }
 }
 
-// Sidebar toggle (mobile)
-const sidebarToggle = document.getElementById('sidebarToggle');
-const sidebar = document.getElementById('sidebar');
-const overlay = document.getElementById('overlay');
-
-if (sidebarToggle) {
-    sidebarToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('-translate-x-full');
-        overlay.classList.toggle('hidden');
-    });
-}
-
-if (overlay) {
-    overlay.addEventListener('click', () => {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-    });
-}
-
-// Logout - Clear all session data including token
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userEmail');
-        window.location.href = 'login.html';
-    });
-}
-
-// Logo upload (keeping your existing code)
-const logoUpload = document.getElementById('logoUpload');
-const sidebarLogo = document.getElementById('sidebarLogo');
-const mobileLogo = document.getElementById('mobileLogo');
-
-if (sidebarLogo) {
-    sidebarLogo.addEventListener('click', () => logoUpload.click());
-}
-
-if (logoUpload) {
-    logoUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                localStorage.setItem('jagomLogo', ev.target.result);
-                loadLogo(ev.target.result);
-            };
-            reader.readAsDataURL(file);
+// Load branches for filter dropdown
+async function loadBranches() {
+    try {
+        const result = await apiFetch('/branches');
+        if (result && result.success && result.data) {
+            allBranches = result.data;
+            const filterSelect = document.getElementById('dashboardBranchFilter');
+            if (filterSelect) {
+                filterSelect.innerHTML = '<option value="all">All Branches</option>';
+                allBranches.forEach(branch => {
+                    filterSelect.innerHTML += `<option value="${branch.id}">${escapeHtml(branch.name)}</option>`;
+                });
+            }
         }
-    });
-}
-
-function loadLogo(src) {
-    if (src) {
-        if (sidebarLogo) {
-            sidebarLogo.innerHTML = `<img src="${src}" alt="Logo" class="w-full h-full object-cover rounded-xl">`;
-        }
-        if (mobileLogo) {
-            mobileLogo.innerHTML = `<img src="${src}" alt="Logo" class="w-full h-full object-cover rounded-lg">`;
-        }
+    } catch (error) {
+        console.error('Error loading branches:', error);
     }
 }
 
-const savedLogo = localStorage.getItem('jagomLogo');
-if (savedLogo) loadLogo(savedLogo);
+// Load branch members breakdown (for Super Admin)
+async function loadBranchMembersBreakdown() {
+    const breakdownDiv = document.getElementById('branchMembersBreakdown');
+    if (!breakdownDiv) return;
+    
+    try {
+        const result = await apiFetch('/attendance/members');
+        if (result && result.success && result.data) {
+            const members = result.data;
+            const branchCounts = {};
+            
+            members.forEach(member => {
+                const branchName = member.branchName || 'Unknown';
+                branchCounts[branchName] = (branchCounts[branchName] || 0) + 1;
+            });
+            
+            let html = '<div class="space-y-1">';
+            for (const [branch, count] of Object.entries(branchCounts)) {
+                html += `<div class="flex justify-between items-center text-xs"><span class="text-gray-500">${escapeHtml(branch)}:</span><span class="font-medium text-gray-700">${count}</span></div>`;
+            }
+            html += '</div>';
+            
+            breakdownDiv.innerHTML = html;
+            breakdownDiv.classList.remove('hidden');
+        } else {
+            breakdownDiv.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Error loading branch breakdown:', error);
+        breakdownDiv.classList.add('hidden');
+    }
+}
 
-// Dashboard stats - Modified to fetch from backend API
-async function updateStats() {
-    // Get elements
+// Load dashboard summary with branch filter
+async function loadDashboardSummary() {
+    const selectedBranch = document.getElementById('dashboardBranchFilter')?.value || 'all';
+    const isSuperAdmin = (currentUserRole === 'SuperAdmin');
+    
     const totalMembersEl = document.getElementById('totalMembers');
     const attendanceTodayEl = document.getElementById('attendanceToday');
     const totalBranchesEl = document.getElementById('totalBranches');
@@ -188,16 +211,52 @@ async function updateStats() {
     if (pendingApprovalsEl) pendingApprovalsEl.innerHTML = '<i class="fas fa-spinner fa-spin text-primary text-sm"></i>';
     
     try {
-        // Fetch dashboard summary from backend
-        const summaryResult = await apiFetch('/dashboard/summary');
-        
-        if (summaryResult && summaryResult.success) {
-            if (totalMembersEl) totalMembersEl.textContent = summaryResult.data.totalMembers || 0;
-            if (attendanceTodayEl) attendanceTodayEl.textContent = summaryResult.data.todaysAttendance || 0;
-            if (totalBranchesEl) totalBranchesEl.textContent = summaryResult.data.totalBranches || 0;
-            if (pendingApprovalsEl) pendingApprovalsEl.textContent = summaryResult.data.pendingFinanceApprovals || 0;
+        if (isSuperAdmin && selectedBranch !== 'all') {
+            // Fetch members for specific branch
+            const membersResult = await apiFetch(`/attendance/members?branchId=${selectedBranch}`);
+            if (membersResult && membersResult.success) {
+                if (totalMembersEl) totalMembersEl.textContent = membersResult.data.length;
+            }
+            
+            // Fetch attendance for last Sunday for specific branch
+            const lastSunday = getLastSunday();
+            const attendanceResult = await apiFetch(`/attendance/records?date=${lastSunday}&branchId=${selectedBranch}`);
+            if (attendanceResult && attendanceResult.success) {
+                if (attendanceTodayEl) attendanceTodayEl.textContent = attendanceResult.data.length;
+            }
+            
+            // Branches count is 1 when filtered
+            if (totalBranchesEl) totalBranchesEl.textContent = '1';
+            
+            // Fetch pending approvals for specific branch
+            const submissionsResult = await apiFetch('/ushers/submissions?status=pending');
+            if (submissionsResult && submissionsResult.success && submissionsResult.data) {
+                const pendingForBranch = submissionsResult.data.filter(s => s.branchId == selectedBranch);
+                if (pendingApprovalsEl) pendingApprovalsEl.textContent = pendingForBranch.length;
+            }
         } else {
-            throw new Error('Failed to load summary');
+            // Use dashboard summary endpoint
+            const summaryResult = await apiFetch('/dashboard/summary');
+            if (summaryResult && summaryResult.success) {
+                if (totalMembersEl) totalMembersEl.textContent = summaryResult.data.totalMembers || 0;
+                if (attendanceTodayEl) attendanceTodayEl.textContent = summaryResult.data.todaysAttendance || 0;
+                if (totalBranchesEl) totalBranchesEl.textContent = summaryResult.data.totalBranches || 0;
+                if (pendingApprovalsEl) pendingApprovalsEl.textContent = summaryResult.data.pendingFinanceApprovals || 0;
+            }
+        }
+        
+        // Load branch members breakdown (for Super Admin only when viewing all branches)
+        if (isSuperAdmin && selectedBranch === 'all') {
+            await loadBranchMembersBreakdown();
+        } else {
+            const breakdownDiv = document.getElementById('branchMembersBreakdown');
+            if (breakdownDiv) breakdownDiv.classList.add('hidden');
+        }
+        
+        // Update last updated timestamp
+        const lastUpdated = document.getElementById('lastUpdated');
+        if (lastUpdated) {
+            lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
         }
     } catch (error) {
         console.error('Error loading dashboard summary:', error);
@@ -206,9 +265,165 @@ async function updateStats() {
         if (totalBranchesEl) totalBranchesEl.innerHTML = '<span class="text-red-500">Error</span>';
         if (pendingApprovalsEl) pendingApprovalsEl.innerHTML = '<span class="text-red-500">Error</span>';
     }
+}
+
+// Get last Sunday date
+function getLastSunday() {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysSinceLastSunday = dayOfWeek === 0 ? 7 : dayOfWeek;
+    const lastSunday = new Date(today);
+    lastSunday.setDate(today.getDate() - daysSinceLastSunday);
+    return lastSunday.toISOString().split('T')[0];
+}
+
+// Load attendance trend chart with period support
+async function loadAttendanceTrend() {
+    const period = document.getElementById('attendancePeriod')?.value || 'monthly';
+    const selectedBranch = document.getElementById('dashboardBranchFilter')?.value || 'all';
+    const isSuperAdmin = (currentUserRole === 'SuperAdmin');
     
-    // Load recent submissions from backend
-    await loadRecentSubmissions();
+    // Handle custom date range
+    let startDate = null;
+    let endDate = null;
+    
+    if (period === 'custom') {
+        startDate = document.getElementById('startDate')?.value;
+        endDate = document.getElementById('endDate')?.value;
+        
+        if (!startDate || !endDate) {
+            // Default to last 30 days if no dates selected
+            const today = new Date();
+            endDate = today.toISOString().split('T')[0];
+            const defaultStart = new Date(today);
+            defaultStart.setDate(today.getDate() - 30);
+            startDate = defaultStart.toISOString().split('T')[0];
+        }
+    }
+    
+    // Show/hide custom date picker
+    const customDateRange = document.getElementById('customDateRange');
+    if (customDateRange) {
+        if (period === 'custom') {
+            customDateRange.classList.remove('hidden');
+        } else {
+            customDateRange.classList.add('hidden');
+        }
+    }
+    
+    let branchId = null;
+    if (isSuperAdmin && selectedBranch !== 'all') {
+        branchId = selectedBranch;
+    } else if (!isSuperAdmin && currentUserBranchId) {
+        branchId = currentUserBranchId;
+    }
+    
+    try {
+        let url = `/analytics/attendance-trend?period=${period}`;
+        if (branchId) {
+            url += `&branchId=${branchId}`;
+        }
+        if (startDate) {
+            url += `&startDate=${startDate}`;
+        }
+        if (endDate) {
+            url += `&endDate=${endDate}`;
+        }
+        
+        const result = await apiFetch(url);
+        
+        const chartCanvas = document.getElementById('attendanceChart');
+        const emptyDiv = document.getElementById('attendanceChartEmpty');
+        
+        if (result && result.success && result.data && result.data.data && result.data.data.length > 0) {
+            const labels = result.data.data.map(d => d.label);
+            const attendanceData = result.data.data.map(d => d.totalAttendance);
+            
+            if (attendanceChart) {
+                attendanceChart.destroy();
+            }
+            
+            const ctx = chartCanvas.getContext('2d');
+            attendanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Sunday Attendance',
+                        data: attendanceData,
+                        backgroundColor: 'rgba(5, 150, 105, 0.7)',
+                        borderColor: '#059669',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        barPercentage: 0.7,
+                        categoryPercentage: 0.8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Attendance: ${context.raw.toLocaleString()} people`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Attendees'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: getXAxisLabel(period)
+                            }
+                        }
+                    }
+                }
+            });
+            
+            if (chartCanvas) chartCanvas.classList.remove('hidden');
+            if (emptyDiv) emptyDiv.classList.add('hidden');
+        } else {
+            if (chartCanvas) chartCanvas.classList.add('hidden');
+            if (emptyDiv) emptyDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error loading attendance trend:', error);
+        const chartCanvas = document.getElementById('attendanceChart');
+        const emptyDiv = document.getElementById('attendanceChartEmpty');
+        if (chartCanvas) chartCanvas.classList.add('hidden');
+        if (emptyDiv) emptyDiv.classList.remove('hidden');
+    }
+}
+
+// Helper to get x-axis label based on period
+function getXAxisLabel(period) {
+    switch(period) {
+        case 'weekly': return 'Week';
+        case 'monthly': return 'Month';
+        case 'quarterly': return 'Quarter';
+        case 'yearly': return 'Year';
+        case 'custom': return 'Date Range';
+        default: return 'Period';
+    }
 }
 
 // Load recent usher submissions from backend
@@ -252,6 +467,29 @@ async function loadRecentSubmissions() {
     }
 }
 
+// Load user welcome message
+async function loadUserWelcome() {
+    try {
+        const result = await apiFetch('/auth/me');
+        if (result && result.success) {
+            const userName = result.data.name;
+            const welcomeBanner = document.querySelector('.bg-gradient-to-r p');
+            if (welcomeBanner) {
+                welcomeBanner.textContent = `Welcome back, ${userName}! Manage your church operations seamlessly across all branches.`;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user info:', error);
+    }
+}
+
+// Refresh all dashboard data
+async function refreshDashboard() {
+    await loadDashboardSummary();
+    await loadAttendanceTrend();
+    await loadRecentSubmissions();
+}
+
 // Helper function to escape HTML
 function escapeHtml(str) {
     if (!str) return '';
@@ -278,27 +516,118 @@ function getStatusClass(status) {
     }
 }
 
-// Load user welcome message
-async function loadUserWelcome() {
-    try {
-        const result = await apiFetch('/auth/me');
-        if (result && result.success) {
-            const userName = result.data.name;
-            const welcomeBanner = document.querySelector('.bg-gradient-to-r p');
-            if (welcomeBanner) {
-                welcomeBanner.textContent = `Welcome back, ${userName}! Manage your church operations seamlessly across all branches.`;
-            }
+// Sidebar toggle (mobile)
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+
+if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    });
+}
+
+if (overlay) {
+    overlay.addEventListener('click', () => {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+    });
+}
+
+// Logout
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userEmail');
+        window.location.href = 'login.html';
+    });
+}
+
+// Logo upload
+const logoUpload = document.getElementById('logoUpload');
+const sidebarLogo = document.getElementById('sidebarLogo');
+const mobileLogo = document.getElementById('mobileLogo');
+
+if (sidebarLogo) {
+    sidebarLogo.addEventListener('click', () => logoUpload?.click());
+}
+
+if (logoUpload) {
+    logoUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                localStorage.setItem('jagomLogo', ev.target.result);
+                loadLogo(ev.target.result);
+            };
+            reader.readAsDataURL(file);
         }
-    } catch (error) {
-        console.error('Error loading user info:', error);
+    });
+}
+
+function loadLogo(src) {
+    if (src) {
+        if (sidebarLogo) {
+            sidebarLogo.innerHTML = `<img src="${src}" alt="Logo" class="w-full h-full object-cover rounded-xl">`;
+        }
+        if (mobileLogo) {
+            mobileLogo.innerHTML = `<img src="${src}" alt="Logo" class="w-full h-full object-cover rounded-lg">`;
+        }
     }
 }
 
+const savedLogo = localStorage.getItem('jagomLogo');
+if (savedLogo) loadLogo(savedLogo);
+
 // Initialize everything
 async function init() {
-    await loadRoleBadge();
+    await loadUserInfo();
+    await loadBranches();
     await loadUserWelcome();
-    await updateStats();
+    await refreshDashboard();
+    
+    // Event listeners
+    const branchFilter = document.getElementById('dashboardBranchFilter');
+    if (branchFilter) {
+        branchFilter.addEventListener('change', () => {
+            refreshDashboard();
+        });
+    }
+    
+    const periodSelect = document.getElementById('attendancePeriod');
+    if (periodSelect) {
+        periodSelect.addEventListener('change', () => {
+            loadAttendanceTrend();
+        });
+    }
+    
+    const refreshBtn = document.getElementById('refreshDashboardBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            refreshDashboard();
+        });
+    }
+    
+    const refreshChartBtn = document.getElementById('refreshChartBtn');
+    if (refreshChartBtn) {
+        refreshChartBtn.addEventListener('click', () => {
+            loadAttendanceTrend();
+        });
+    }
+    
+    // Custom range apply button
+    const applyCustomRange = document.getElementById('applyCustomRange');
+    if (applyCustomRange) {
+        applyCustomRange.addEventListener('click', () => {
+            loadAttendanceTrend();
+        });
+    }
 }
 
 // Call init on page load

@@ -1,4 +1,4 @@
-// js/superadmin.js - Backend Integrated Version
+// js/superadmin.js - Backend Integrated Version with Branch Support
 
 // API Base URL
 const API_BASE_URL = 'https://localhost:7015/api';
@@ -112,22 +112,46 @@ async function loadUsers() {
     }
 }
 
-// Load branches from backend
+// Load branches from backend and populate dropdowns
 async function loadBranches() {
     try {
         const result = await apiFetch('/branches');
         if (result && result.success) {
             branches = result.data;
             renderBranchesTable();
+            populateBranchDropdowns();
         } else {
             console.error('Failed to load branches');
             branches = [];
             renderBranchesTable();
+            populateBranchDropdowns();
         }
     } catch (error) {
         console.error('Error loading branches:', error);
         branches = [];
         renderBranchesTable();
+        populateBranchDropdowns();
+    }
+}
+
+// Populate branch dropdowns in create and edit forms
+function populateBranchDropdowns() {
+    // Populate create user branch dropdown
+    const userBranchSelect = document.getElementById('userBranch');
+    if (userBranchSelect) {
+        userBranchSelect.innerHTML = '<option value="">Select Branch</option>';
+        branches.forEach(branch => {
+            userBranchSelect.innerHTML += `<option value="${branch.id}">${escapeHtml(branch.name)}</option>`;
+        });
+    }
+    
+    // Populate edit user branch dropdown
+    const editBranchSelect = document.getElementById('editBranch');
+    if (editBranchSelect) {
+        editBranchSelect.innerHTML = '<option value="">Select Branch</option>';
+        branches.forEach(branch => {
+            editBranchSelect.innerHTML += `<option value="${branch.id}">${escapeHtml(branch.name)}</option>`;
+        });
     }
 }
 
@@ -135,13 +159,13 @@ async function loadBranches() {
 // UI RENDERING FUNCTIONS
 // ============================================
 
-// Render users table
+// Render users table with branch column
 function renderUsersTable() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
     if (!users || users.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="px-5 py-8 text-center text-gray-400">No users found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">No users found</td></tr>`;
         return;
     }
 
@@ -174,6 +198,9 @@ function renderUsersTable() {
             <td class="px-5 py-3 text-sm">${escapeHtml(user.email)}</td>
             <td class="px-5 py-3 text-sm">
                 <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${roleClass}">${roleText}</span>
+            </td>
+            <td class="px-5 py-3 text-sm">
+                <span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">${escapeHtml(user.branchName || 'No Branch')}</span>
             </td>
             <td class="px-5 py-3 text-sm">
                 <div class="flex items-center gap-2">
@@ -229,9 +256,10 @@ async function createUser() {
     const email = document.getElementById('userEmail').value.trim();
     const password = document.getElementById('userPassword').value;
     const role = document.getElementById('userRole').value;
+    const branchId = document.getElementById('userBranch').value;
 
     if (!name || !email || !password) {
-        alert('Please fill in all fields');
+        alert('Please fill in all required fields');
         return;
     }
 
@@ -245,20 +273,34 @@ async function createUser() {
         return;
     }
 
+    // For Super Admin role, branch is optional
+    // For Admin and User roles, branch is required
+    if (role !== 'superadmin' && !branchId) {
+        alert('Please select a branch for this user');
+        return;
+    }
+
     const createBtn = document.getElementById('createUserBtn');
     const originalText = createBtn.innerHTML;
     createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
     createBtn.disabled = true;
 
     try {
+        const requestBody = {
+            name: name,
+            email: email,
+            password: password,
+            role: role
+        };
+        
+        // Only include branchId if provided
+        if (branchId) {
+            requestBody.branchId = parseInt(branchId);
+        }
+        
         const result = await apiFetch('/users', {
             method: 'POST',
-            body: JSON.stringify({
-                name: name,
-                email: email,
-                password: password,
-                role: role
-            })
+            body: JSON.stringify(requestBody)
         });
 
         if (result && result.success) {
@@ -267,6 +309,7 @@ async function createUser() {
             document.getElementById('userEmail').value = '';
             document.getElementById('userPassword').value = '';
             document.getElementById('userRole').value = 'user';
+            document.getElementById('userBranch').value = '';
 
             await loadUsers();
             showToast('User created successfully!', 'success');
@@ -300,6 +343,13 @@ async function editUser(userId) {
             
             document.getElementById('editRole').value = roleValue;
             document.getElementById('editPassword').value = '';
+            
+            // Set branch if exists
+            if (user.branchId) {
+                document.getElementById('editBranch').value = user.branchId;
+            } else {
+                document.getElementById('editBranch').value = '';
+            }
 
             document.getElementById('editUserModal').classList.remove('hidden');
             document.getElementById('editUserModal').style.display = 'flex';
@@ -315,10 +365,17 @@ async function saveUserEdit() {
     const newName = document.getElementById('editFullname').value.trim();
     const newEmail = document.getElementById('editEmail').value.trim();
     const newRole = document.getElementById('editRole').value;
+    const newBranchId = document.getElementById('editBranch').value;
     const newPassword = document.getElementById('editPassword').value;
 
     if (!newName || !newEmail) {
         alert('Name and email are required');
+        return;
+    }
+
+    // For Admin and User roles, branch is required
+    if (newRole !== 'superadmin' && !newBranchId) {
+        alert('Please select a branch for this user');
         return;
     }
 
@@ -333,6 +390,10 @@ async function saveUserEdit() {
             email: newEmail,
             role: newRole
         };
+        
+        if (newBranchId) {
+            updateData.branchId = parseInt(newBranchId);
+        }
         
         if (newPassword) {
             updateData.password = newPassword;
@@ -737,8 +798,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const hasAccess = await checkAccess();
     if (!hasAccess) return;
 
+    await loadBranches(); // Load branches first to populate dropdowns
     await loadUsers();
-    await loadBranches();
     
     initTabs();
     initLogoUpload();

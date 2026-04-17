@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/finance.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-gray-50 font-sans text-gray-800">
 
@@ -115,15 +116,108 @@
 
         <!-- Finance Content -->
         <div id="financeContent" class="hidden p-4 sm:p-6 lg:p-8">
-            <!-- Branch Performance -->
+            
+            <!-- Finance Period Filter -->
+            <div class="mb-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm font-medium text-gray-700">Period:</label>
+                        <select id="financePeriod" class="px-4 py-2 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-sm bg-white">
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly" selected>Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                        <div id="financeCustomDateRange" class="hidden flex gap-2">
+                            <input type="date" id="financeStartDate" class="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none">
+                            <input type="date" id="financeEndDate" class="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none">
+                            <button id="applyFinanceRange" class="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark transition">Apply</button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400" id="financeLastUpdated"></span>
+                        <button id="refreshFinanceBtn" class="text-primary hover:text-primary-dark transition" title="Refresh Data">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Rating Cards -->
             <div class="mb-8">
-                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Branch Performance</h3>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">🏆 Branch Performance Rating</h3>
+                    <span class="text-xs text-gray-400" id="recommendationText"></span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="performanceRatings">
+                    <!-- Dynamic rating cards will appear here -->
+                </div>
+            </div>
+
+            <!-- Finance Trend Chart -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm mb-8">
+                <div class="p-5 border-b border-gray-50">
+                    <h3 class="font-semibold text-gray-900"><i class="fas fa-chart-line text-primary mr-2"></i>Financial Trend</h3>
+                </div>
+                <div class="p-5">
+                    <canvas id="financeTrendChart" height="300" style="max-height: 300px; width: 100%;"></canvas>
+                    <div id="financeChartEmpty" class="hidden text-center py-8 text-gray-400">
+                        <i class="fas fa-chart-line text-3xl mb-3"></i>
+                        <p class="text-sm">No financial data available for the selected period</p>
+                    </div>
+                </div>
+                <!-- Summary Stats -->
+                <div class="p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="text-center">
+                            <p class="text-xs text-gray-500">Total Tithe</p>
+                            <p class="text-lg font-bold text-primary" id="totalTithe">₦0</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs text-gray-500">Total Offering</p>
+                            <p class="text-lg font-bold text-primary" id="totalOffering">₦0</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs text-gray-500">Special Seed</p>
+                            <p class="text-lg font-bold text-primary" id="totalSpecialSeed">₦0</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs text-gray-500">Grand Total</p>
+                            <p class="text-lg font-bold text-primary-dark" id="grandTotal">₦0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch Comparison Chart -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm mb-8">
+                <div class="p-5 border-b border-gray-50">
+                    <h3 class="font-semibold text-gray-900"><i class="fas fa-chart-simple text-primary mr-2"></i>Branch Comparison</h3>
+                </div>
+                <div class="p-5">
+                    <canvas id="branchComparisonChart" height="300" style="max-height: 300px; width: 100%;"></canvas>
+                    <div id="branchComparisonEmpty" class="hidden text-center py-8 text-gray-400">
+                        <i class="fas fa-chart-simple text-3xl mb-3"></i>
+                        <p class="text-sm">No branch comparison data available</p>
+                    </div>
+                </div>
+                <div class="p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-600" id="topBranchMessage"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch Performance Cards (Original) -->
+            <div class="mb-8">
+                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Branch Financial Summary</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" id="branchPerformance">
                 </div>
             </div>
 
             <!-- Approval Table -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm mb-8">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
                 <div class="p-5 border-b border-gray-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <h3 class="font-semibold text-gray-900"><i class="fas fa-file-invoice-dollar text-primary mr-2"></i>Submissions for Approval</h3>
                     <div class="flex items-center gap-2">
