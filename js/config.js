@@ -1,2 +1,2 @@
 // js/config.js
-const API_BASE_URL = 'https://localhost:7015/api';
+const API_BASE_URL = 'https://jagomcms-001-site1.ktempurl.com/api';

@@ -1,7 +1,7 @@
 // js/dashboard.js - Enhanced Version with Analytics
 
 // API Base URL
-const API_BASE_URL = 'https://localhost:7015/api';
+const API_BASE_URL = 'https://jagomcms-001-site1.ktempurl.com/api';
 
 // Global variables
 let attendanceChart = null;

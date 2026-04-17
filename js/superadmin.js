@@ -1,7 +1,7 @@
 // js/superadmin.js - Backend Integrated Version with Branch Support
 
 // API Base URL
-const API_BASE_URL = 'https://localhost:7015/api';
+const API_BASE_URL = 'https://jagomcms-001-site1.ktempurl.com/api';
 
 // Helper function for authenticated API calls
 async function apiFetch(endpoint, options = {}) {

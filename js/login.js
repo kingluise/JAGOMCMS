@@ -1,7 +1,7 @@
 // js/login.js - No import needed
 
 // Define API_BASE_URL directly
-const API_BASE_URL = 'https://localhost:7015/api';
+const API_BASE_URL = 'https://jagomcms-001-site1.ktempurl.com/api';
 
 // Initialize only branch data (no user initialization)
 function initDefaults() {
